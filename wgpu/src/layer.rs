@@ -1,6 +1,5 @@
-use crate::core::{
-    self, Background, Color, Point, Rectangle, Svg, Transformation, renderer,
-};
+use iced_debug::core::ExtBackground;
+use crate::core::{self, Background, Color, Point, Rectangle, Svg, Transformation, renderer, ExtPolygon, ExtPath, ExtShadow, Shadow};
 use crate::graphics;
 use crate::graphics::Mesh;
 use crate::graphics::color;
@@ -61,6 +60,45 @@ impl Layer {
         };
 
         self.quads.add(quad, &background);
+    }
+
+    pub fn draw_polygon(
+        &mut self,
+        polygon: ExtPolygon,
+        ext_background: ExtBackground,
+        transformation: Transformation,
+    ) {
+        let bounds = polygon.bounds * transformation;
+        let shadow = polygon.shadow.shadows.first().copied().unwrap_or_default();
+        let background = match ext_background {
+            ExtBackground::Color(c) => Background::Color(c),
+            _ => Background::Color(Color::TRANSPARENT),
+        };
+        match &polygon.path {
+            ExtPath::Polygon(_) => {}
+            ExtPath::Quad(radius) => {
+                let border_color = match &polygon.border.background {
+                    ExtBackground::Color(c) => *c,
+                    _ => Color::TRANSPARENT
+                };
+                let quad = Quad {
+                    position: [bounds.x, bounds.y],
+                    size: [bounds.width, bounds.height],
+                    border_color: color::pack(border_color),
+                    border_radius: (*radius * transformation.scale_factor())
+                        .into(),
+                    border_width: polygon.border.width * transformation.scale_factor(),
+                    shadow_color: color::pack(shadow.color),
+                    shadow_offset: (shadow.offset * transformation.scale_factor())
+                        .into(),
+                    shadow_blur_radius: shadow.blur_radius
+                        * transformation.scale_factor(),
+                    snap: polygon.snap as u32,
+                };
+
+                self.quads.add(quad, &background);
+            }
+        }
     }
 
     pub fn draw_paragraph(

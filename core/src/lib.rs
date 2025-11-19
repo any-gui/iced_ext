@@ -49,6 +49,8 @@ mod size;
 mod transformation;
 mod vector;
 
+mod iced_ext;
+
 pub use alignment::Alignment;
 pub use angle::{Degrees, Radians};
 pub use animation::Animation;
@@ -82,6 +84,7 @@ pub use theme::Theme;
 pub use transformation::Transformation;
 pub use vector::Vector;
 pub use widget::Widget;
+pub use iced_ext::*;
 
 pub use bytes::Bytes;
 pub use smol_str::SmolStr;

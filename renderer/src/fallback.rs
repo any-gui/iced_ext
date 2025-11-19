@@ -1,5 +1,5 @@
 //! Compose existing renderers and create type-safe fallback strategies.
-use crate::core::image;
+use crate::core::{image, ExtBackground, ExtPolygon};
 use crate::core::renderer;
 use crate::core::svg;
 use crate::core::{
@@ -44,6 +44,10 @@ where
         background: impl Into<Background>,
     ) {
         delegate!(self, renderer, renderer.fill_quad(quad, background.into()));
+    }
+
+    fn fill_polygon(&mut self, polygon: ExtPolygon, background: impl Into<ExtBackground>) {
+        delegate!(self, renderer, renderer.fill_polygon(polygon, background.into()));
     }
 
     fn reset(&mut self, new_bounds: Rectangle) {

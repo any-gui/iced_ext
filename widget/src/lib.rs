@@ -43,10 +43,13 @@ pub mod toggler;
 pub mod tooltip;
 pub mod vertical_slider;
 
+pub mod ext_container;
+
 mod helpers;
 
 pub use helpers::*;
 
+pub use ext_container::*;
 #[cfg(feature = "lazy")]
 mod lazy;
 

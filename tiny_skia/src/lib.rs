@@ -28,7 +28,7 @@ pub use settings::Settings;
 #[cfg(feature = "geometry")]
 pub use geometry::Geometry;
 
-use crate::core::renderer;
+use crate::core::{renderer, ExtBackground, ExtPolygon};
 use crate::core::{
     Background, Color, Font, Pixels, Point, Rectangle, Size, Transformation,
 };
@@ -223,6 +223,10 @@ impl core::Renderer for Renderer {
     ) {
         let (layer, transformation) = self.layers.current_mut();
         layer.draw_quad(quad, background.into(), transformation);
+    }
+
+    fn fill_polygon(&mut self, quad: ExtPolygon, background: impl Into<ExtBackground>) {
+        todo!()
     }
 
     fn reset(&mut self, new_bounds: Rectangle) {

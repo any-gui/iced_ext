@@ -1,0 +1,10 @@
+[package]
+name = "anygui_ext"
+version = "0.1.0"
+authors = ["Jing Xing <xxingjjing110@gmail.com>"]
+edition = "2024"
+publish = false
+
+[dependencies]
+iced.workspace = true
+iced.features = ["svg","image"]

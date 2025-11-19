@@ -1,4 +1,4 @@
-use crate::alignment;
+use crate::{alignment, ExtBackground, ExtPolygon};
 use crate::image::{self, Image};
 use crate::renderer::{self, Renderer};
 use crate::svg;
@@ -23,6 +23,9 @@ impl Renderer for () {
         _quad: renderer::Quad,
         _background: impl Into<Background>,
     ) {
+    }
+
+    fn fill_polygon(&mut self, _quad: ExtPolygon, _background: impl Into<ExtBackground>) {
     }
 
     fn allocate_image(
