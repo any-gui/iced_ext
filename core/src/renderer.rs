@@ -11,7 +11,7 @@ use crate::{
 /// A component that can be used by widgets to draw themselves on a screen.
 pub trait Renderer {
     /// Starts recording a new layer.
-    fn start_layer(&mut self, bounds: Rectangle);
+    fn start_layer(&mut self, bounds: Rectangle,is_independent: bool);
 
     /// Ends recording a new layer.
     ///
@@ -22,7 +22,13 @@ pub trait Renderer {
     ///
     /// The layer will clip its contents to the provided `bounds`.
     fn with_layer(&mut self, bounds: Rectangle, f: impl FnOnce(&mut Self)) {
-        self.start_layer(bounds);
+        self.start_layer(bounds,false);
+        f(self);
+        self.end_layer();
+    }
+    /// with independent layer
+    fn with_independent_layer(&mut self, bounds: Rectangle, f: impl FnOnce(&mut Self)) {
+        self.start_layer(bounds,true);
         f(self);
         self.end_layer();
     }

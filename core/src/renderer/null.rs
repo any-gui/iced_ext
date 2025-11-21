@@ -8,7 +8,7 @@ use crate::{
 };
 
 impl Renderer for () {
-    fn start_layer(&mut self, _bounds: Rectangle) {}
+    fn start_layer(&mut self, _bounds: Rectangle,is_independent: bool) {}
 
     fn end_layer(&mut self) {}
 
