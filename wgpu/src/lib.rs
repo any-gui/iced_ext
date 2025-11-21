@@ -44,7 +44,9 @@ mod image;
 #[cfg(not(any(feature = "image", feature = "svg")))]
 #[path = "image/null.rs"]
 mod image;
+mod blit;
 
+use std::collections::HashMap;
 use buffer::Buffer;
 
 use iced_debug as debug;
@@ -60,7 +62,6 @@ pub use settings::Settings;
 
 #[cfg(feature = "geometry")]
 pub use geometry::Geometry;
-
 use crate::core::{renderer, ExtBackground, ExtPolygon};
 use crate::core::{
     Background, Color, Font, Pixels, Point, Rectangle, Size, Transformation,
@@ -84,6 +85,9 @@ pub struct Renderer {
     text: text::State,
     text_viewport: text::Viewport,
 
+    //blit
+    blit: blit::State,
+
     #[cfg(any(feature = "svg", feature = "image"))]
     image: image::State,
 
@@ -92,6 +96,17 @@ pub struct Renderer {
     image_cache: std::cell::RefCell<image::Cache>,
 
     staging_belt: wgpu::util::StagingBelt,
+
+    // 新增：用于缓存独立 layer 的 frame buffer
+    independent_framebuffers: HashMap<usize, IndependentFramebuffer>,
+}
+
+// use for independent layer
+#[derive(Debug)]
+struct IndependentFramebuffer {
+    texture: wgpu::Texture,
+    view: wgpu::TextureView,
+    size: Size<u32>,
 }
 
 impl Renderer {
@@ -113,6 +128,8 @@ impl Renderer {
             text: text::State::new(),
             text_viewport: engine.text_pipeline.create_viewport(&engine.device),
 
+            blit: blit::State::default(),
+
             #[cfg(any(feature = "svg", feature = "image"))]
             image: image::State::new(),
 
@@ -127,6 +144,8 @@ impl Renderer {
             ),
 
             engine,
+
+            independent_framebuffers: HashMap::new(),
         }
     }
 
@@ -310,15 +329,51 @@ impl Renderer {
 
         self.layers.merge();
 
-        for layer in self.layers.iter() {
+        for (layer_index,layer) in self.layers.iter().enumerate() {
             let clip_bounds = layer.bounds * scale_factor;
 
-            if physical_bounds
-                .intersection(&clip_bounds)
-                .and_then(Rectangle::snap)
-                .is_none()
-            {
+            let Some(snap_bound) = physical_bounds.intersection(&clip_bounds).and_then(Rectangle::snap) else {
                 continue;
+            };
+
+            if layer.is_independent {
+                // prepare frame buffer for independent layer
+                let size = Size::new(snap_bound.width, snap_bound.height);
+                let needs_resize = self
+                    .independent_framebuffers
+                    .get(&layer_index)
+                    .map(|fb| fb.size != size)
+                    .unwrap_or(true);
+
+                if needs_resize {
+                    let texture = self.engine.device.create_texture(&wgpu::TextureDescriptor {
+                        label: Some(&format!("iced_wgpu.independent_framebuffer.{}", layer_index)),
+                        size: wgpu::Extent3d {
+                            width: size.width,
+                            height: size.height,
+                            depth_or_array_layers: 1,
+                        },
+                        mip_level_count: 1,
+                        sample_count: 1,
+                        dimension: wgpu::TextureDimension::D2,
+                        format: self.engine.format,
+                        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                            | wgpu::TextureUsages::TEXTURE_BINDING
+                            | wgpu::TextureUsages::COPY_SRC,
+                        view_formats: &[],
+                    });
+
+                    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+                    let _ = self.independent_framebuffers.insert(
+                        layer_index,
+                        IndependentFramebuffer {
+                            texture,
+                            view,
+                            size,
+                        },
+                    );
+                }
             }
 
             if !layer.quads.is_empty() {
@@ -468,17 +523,44 @@ impl Renderer {
 
         let scale = Transformation::scale(scale_factor);
 
-        for layer in self.layers.iter() {
+        for (layer_index, layer) in self.layers.iter().enumerate() {
             let Some(physical_bounds) =
                 physical_bounds.intersection(&(layer.bounds * scale_factor))
             else {
                 continue;
             };
 
-            let Some(scissor_rect) = physical_bounds.snap() else {
+            let Some(mut scissor_rect) = physical_bounds.snap() else {
                 continue;
             };
 
+            if layer.is_independent {
+                // 临时结束当前 render pass
+                if let Some(framebuffer) = self.independent_framebuffers.get(&layer_index) {
+                    let _ = ManuallyDrop::into_inner(render_pass);
+                    // 创建独立的 viewport
+                    let layer_viewport_view = &framebuffer.view;
+                    // 渲染到独立 frame buffer
+                    render_pass = ManuallyDrop::new(encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some(&format!("iced_wgpu.independent_layer.{}", layer_index)),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: layer_viewport_view,
+                            depth_slice: None,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                    }));
+                    scissor_rect = Rectangle::with_size(framebuffer.size);
+                }
+            };
+
+            // 5. 正常渲染非独立 layer（保持顺序）
             if !layer.quads.is_empty() {
                 let render_span = debug::render(debug::Primitive::Quad);
                 self.quad.render(
@@ -489,7 +571,6 @@ impl Renderer {
                     &mut render_pass,
                 );
                 render_span.finish();
-
                 quad_layer += 1;
             }
 
@@ -650,6 +731,51 @@ impl Renderer {
                     &mut render_pass,
                 );
                 render_span.finish();
+            }
+
+            if layer.is_independent {
+                // drop render lass
+                let _ = ManuallyDrop::into_inner(render_pass);
+                // 重新开始 render pass
+                render_pass = ManuallyDrop::new(encoder.begin_render_pass(
+                    &wgpu::RenderPassDescriptor {
+                        label: Some("iced_wgpu render pass"),
+                        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                            view: frame,
+                            depth_slice: None,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Load,
+                                store: wgpu::StoreOp::Store,
+                            },
+                        })],
+                        depth_stencil_attachment: None,
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                    },
+                ));
+
+                // get the offscreen framebuffer we just rendered (from your HashMap)
+                let fb = &self.independent_framebuffers[&layer_index];
+                let fb_view = &fb.view;
+
+                // compute dst rect in physical pixels (left, top origin)
+                let scale = viewport.scale_factor();
+                let layer_bounds = layer.bounds * scale;
+                let dst_x = layer_bounds.x.round() as u32;
+                let dst_y = layer_bounds.y.round() as u32;
+                let dst_w = layer_bounds.width.ceil() as u32;
+                let dst_h = layer_bounds.height.ceil() as u32;
+
+                // call blit (use engine.blit_pipeline)
+                self.engine.blit_pipeline.render_blit(
+                    &self.engine.device,
+                    &self.engine.queue,
+                    &mut render_pass,
+                    fb_view,
+                    (dst_x, dst_y, dst_w, dst_h),
+                    (viewport.physical_width(), viewport.physical_height()),
+                );
             }
         }
 

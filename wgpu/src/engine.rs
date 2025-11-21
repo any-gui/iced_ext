@@ -17,6 +17,7 @@ pub struct Engine {
     pub(crate) triangle_pipeline: triangle::Pipeline,
     #[cfg(any(feature = "image", feature = "svg"))]
     pub(crate) image_pipeline: crate::image::Pipeline,
+    pub(crate) blit_pipeline: crate::blit::Pipeline,
     pub(crate) primitive_storage: Arc<RwLock<primitive::Storage>>,
     _shell: Shell,
 }
@@ -47,6 +48,8 @@ impl Engine {
 
                 crate::image::Pipeline::new(&device, format, backend)
             },
+
+            blit_pipeline: crate::blit::Pipeline::new(&device, format),
 
             primitive_storage: Arc::new(RwLock::new(
                 primitive::Storage::default(),
