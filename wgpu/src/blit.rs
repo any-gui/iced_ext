@@ -25,9 +25,9 @@ impl Pipeline {
         // shader module
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("blit_shader"),
-            source: wgpu::ShaderSource::Wgsl(
-                include_str!("../shader/blit.wgsl").into(),
-            ),
+            source: wgpu::ShaderSource::Wgsl(std::borrow::Cow::Borrowed(
+                include_str!("./shader/blit_layer.wgsl")
+            ))
         });
 
         // bind group layout: 0 - texture, 1 - sampler, 2 - uniform
@@ -80,17 +80,19 @@ impl Pipeline {
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: "vs_main",
+                entry_point: Some("vs_main"),
                 buffers: &[], // using @builtin(vertex_index)
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: "fs_main",
+                entry_point: Some("fs_main"),
                 targets: &[Some(wgpu::ColorTargetState {
                     format: target_format,
                     blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
             }),
             primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleStrip,
@@ -102,6 +104,7 @@ impl Pipeline {
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
+            cache: None,
         });
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
