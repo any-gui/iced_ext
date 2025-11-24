@@ -3,7 +3,7 @@ use crate::border::Radius;
 use crate::gradient::Linear;
 use crate::image::Handle;
 use crate::renderer::{Quad, Style};
-
+use std::ops::{Deref, Mul};
 /// ExtPolygon
 pub struct ExtPolygon {
     /// The bounds of the [`Quad`].
@@ -20,6 +20,20 @@ pub struct ExtPolygon {
 
     /// Whether the [`Quad`] should be snapped to the pixel grid.
     pub snap: bool,
+}
+
+impl ExtPolygon {
+    /// Scale Alpha Of ExtPolygon
+    pub fn scale_alpha(self, alpha: PercentF32) -> Self {
+        let Self { bounds, path, border, shadow, snap } = self;
+        Self {
+            bounds,
+            path,
+            border: border.scale_alpha(alpha),
+            shadow: shadow.scale_alpha(alpha),
+            snap,
+        }
+    }
 }
 
 /// ExtPath
@@ -40,6 +54,17 @@ pub enum ExtBackground {
     Gradient(Gradient),
     /// Image variant Background
     Image(ExtImageBackground)
+}
+
+impl ExtBackground {
+    /// Scale Alpha For ExtBackground
+    pub fn scale_alpha(self, alpha: PercentF32) -> Self {
+        match self {
+            ExtBackground::Color(c) => ExtBackground::Color(c.scale_alpha(alpha)),
+            ExtBackground::Gradient(g) => ExtBackground::Gradient(g.scale_alpha(*alpha)),
+            ExtBackground::Image(i) => ExtBackground::Image(i.scale_alpha(alpha)),
+        }
+    }
 }
 
 impl From<Gradient> for ExtBackground {
@@ -67,6 +92,16 @@ pub struct ExtImageBackground {
     pub position: (f32, f32),
     /// 图片尺寸策略
     pub size: ExtImageSize,
+    /// Image Layer Alpha
+    pub alpha: PercentF32,
+}
+
+impl ExtImageBackground {
+    /// Scale Alpha for ExtImageBackground
+    pub fn scale_alpha(mut self, alpha: PercentF32) -> Self {
+        self.alpha = self.alpha * alpha;
+        self
+    }
 }
 
 /// 图片尺寸策略
@@ -164,6 +199,12 @@ impl ExtBorder {
             width: 1.0,
         }
     }
+
+    /// Scale Alpha For ExtBorder
+    pub fn scale_alpha(mut self, scale: PercentF32) -> Self {
+        self.background = self.background.scale_alpha(scale);
+        self
+    }
 }
 
 impl Default for ExtBorder {
@@ -195,11 +236,29 @@ pub struct ExtBoxShadow {
     pub is_inset: bool,
 }
 
+
+impl ExtBoxShadow {
+    /// Scale Alpha For Shadow
+    pub fn scale_alpha(mut self, scale: PercentF32) -> Self {
+        self.color = self.color.scale_alpha(scale);
+        self
+    }
+}
+
 /// ExtShadow
 #[derive(Debug, Clone)]
 pub struct ExtShadow {
     /// shadows
     pub shadows: Vec<ExtBoxShadow>,
+}
+
+impl ExtShadow {
+    /// Scale Alpha For Shadow Vector
+    pub fn scale_alpha(mut self, scale: PercentF32) -> Self {
+        Self {
+            shadows: self.shadows.into_iter().map(|s|s.scale_alpha(scale)).collect()
+        }
+    }
 }
 
 impl PartialEq for ExtShadow {
@@ -229,5 +288,77 @@ impl Default for ExtShadow {
 impl From<Color> for ExtBackground {
     fn from(color: Color) -> ExtBackground {
         ExtBackground::Color(color)
+    }
+}
+
+/// Data type Used for Percent
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(transparent)]
+pub struct PercentF32(f32);
+
+impl PercentF32 {
+    /// 创建，自动 clamp 到 [0, 1]
+    pub fn new(value: f32) -> Self {
+        Self(value.clamp(0.0, 1.0))
+    }
+
+    /// 原始值
+    pub fn get(self) -> f32 {
+        self.0
+    }
+}
+
+impl From<f32> for PercentF32 {
+    fn from(value: f32) -> Self {
+        PercentF32::new(value)
+    }
+}
+
+impl From<PercentF32> for f32 {
+    fn from(p: PercentF32) -> f32 {
+        p.0
+    }
+}
+
+impl AsRef<f32> for PercentF32 {
+    fn as_ref(&self) -> &f32 {
+        &self.0
+    }
+}
+
+impl Deref for PercentF32 {
+    type Target = f32;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Default for PercentF32 {
+    fn default() -> Self {
+        Self(1.)
+    }
+}
+
+// PercentF32 * f32 -> f32（最常见：缩放）
+impl Mul<f32> for PercentF32 {
+    type Output = f32;
+    fn mul(self, rhs: f32) -> Self::Output {
+        self.0 * rhs
+    }
+}
+
+// f32 * PercentF32 -> f32（可交换）
+impl Mul<PercentF32> for f32 {
+    type Output = f32;
+    fn mul(self, rhs: PercentF32) -> Self::Output {
+        self * rhs.0
+    }
+}
+
+// PercentF32 * PercentF32 -> PercentF32（表示百分比叠乘）
+impl Mul for PercentF32 {
+    type Output = PercentF32;
+    fn mul(self, rhs: PercentF32) -> Self::Output {
+        PercentF32::new(self.0 * rhs.0)
     }
 }

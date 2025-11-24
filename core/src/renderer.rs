@@ -2,7 +2,7 @@
 #[cfg(debug_assertions)]
 mod null;
 
-use crate::{image, ExtBackground, ExtPolygon};
+use crate::{image, ExtBackground, ExtPolygon, PercentF32};
 use crate::{
     Background, Border, Color, Font, Pixels, Rectangle, Shadow, Size,
     Transformation, Vector,
@@ -109,12 +109,15 @@ impl Default for Quad {
 pub struct Style {
     /// The text color
     pub text_color: Color,
+    /// Opacity
+    pub opacity: PercentF32,
 }
 
 impl Default for Style {
     fn default() -> Self {
         Style {
             text_color: Color::BLACK,
+            opacity: Default::default(),
         }
     }
 }

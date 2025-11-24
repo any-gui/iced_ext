@@ -19,6 +19,8 @@
 //!         .into()
 //! }
 //! ```
+
+use iced_renderer::core::PercentF32;
 use crate::core::alignment::{self, Alignment};
 use crate::core::border::{self, Border, Radius};
 use crate::core::gradient::{self, Gradient};
@@ -76,6 +78,7 @@ pub struct ExtContainer<
     clip: bool,
     content: Element<'a, Message, Theme, Renderer>,
     class: Theme::Class<'a>,
+    opacity: PercentF32,
 }
 
 impl<'a, Message, Theme, Renderer> ExtContainer<'a, Message, Theme, Renderer>
@@ -102,6 +105,7 @@ where
             clip: false,
             class: Theme::default(),
             content,
+            opacity: Default::default(),
         }
     }
 
@@ -223,6 +227,12 @@ where
     #[must_use]
     pub fn class(mut self, class: impl Into<Theme::Class<'a>>) -> Self {
         self.class = class.into();
+        self
+    }
+
+    /// Sets the opacity of the [`ExtContainer`].
+    pub fn opacity(mut self, opacity: impl Into<PercentF32>) -> Self {
+        self.opacity = opacity.into();
         self
     }
 }
@@ -347,9 +357,9 @@ where
     ) {
         let bounds = layout.bounds();
         let style = theme.style(&self.class);
-
+        let composed_opacity = self.opacity * renderer_style.opacity;
         if let Some(clipped_viewport) = bounds.intersection(viewport) {
-            draw_background(renderer, &style, bounds);
+            draw_background(renderer, &style, bounds,composed_opacity);
 
             self.content.as_widget().draw(
                 tree,
@@ -359,6 +369,7 @@ where
                     text_color: style
                         .text_color
                         .unwrap_or(renderer_style.text_color),
+                    opacity: composed_opacity,
                 },
                 layout.children().next().unwrap(),
                 cursor,
@@ -436,6 +447,7 @@ pub fn draw_background<Renderer>(
     renderer: &mut Renderer,
     style: &Style,
     bounds: Rectangle,
+    opacity: PercentF32,
 ) where
     Renderer: core::Renderer,
 {
@@ -450,11 +462,11 @@ pub fn draw_background<Renderer>(
                 border: style.border.clone(),
                 shadow: style.shadow.clone(),
                 snap: false,
-            },
+            }.scale_alpha(opacity),
             style
                 .background
                 .clone()
-                .unwrap_or(ExtBackground::Color(Color::TRANSPARENT)),
+                .unwrap_or(ExtBackground::Color(Color::TRANSPARENT)).scale_alpha(opacity),
         );
     }
 }

@@ -189,9 +189,9 @@ impl Color {
     }
 
     /// Scales the alpha channel of the [`Color`] by the given factor.
-    pub fn scale_alpha(self, factor: f32) -> Color {
+    pub fn scale_alpha(self, factor: impl Into<f32>) -> Color {
         Self {
-            a: self.a * factor,
+            a: self.a * factor.into(),
             ..self
         }
     }
