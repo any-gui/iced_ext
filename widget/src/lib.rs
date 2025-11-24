@@ -154,3 +154,8 @@ pub mod markdown;
 pub use crate::core::theme::{self, Theme};
 pub use action::Action;
 pub use renderer::Renderer;
+pub use core::ExtBoxShadow;
+pub use core::ExtShadow;
+pub use core::ExtBackground;
+pub use core::ExtPath;
+pub use core::ExtBorder;

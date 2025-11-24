@@ -160,6 +160,7 @@ where
         let style = if let Some(text_color) = self.text_color {
             renderer::Style {
                 text_color: text_color(theme),
+                opacity: Default::default(),
             }
         } else {
             *style

@@ -961,6 +961,7 @@ async fn run_instance<P>(
                             window.state.theme(),
                             &renderer::Style {
                                 text_color: window.state.text_color(),
+                                opacity: Default::default(),
                             },
                             cursor,
                         );

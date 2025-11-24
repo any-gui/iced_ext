@@ -404,6 +404,7 @@ where
             theme,
             &renderer::Style {
                 text_color: style.text_color,
+                opacity: Default::default(),
             },
             content_layout,
             cursor,
