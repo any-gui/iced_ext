@@ -1,8 +1,8 @@
 // shader/blit.wgsl
 
 struct VertOut {
-    @builtin(position) pos: vec4<f32>,
-    @location(0) uv: vec2<f32>,
+    @builtin(position) pos: vec4<f32>;
+    @location(0) uv: vec2<f32>;
 };
 
 // uniform: center_x, center_y, width_ndc, height_ndc
