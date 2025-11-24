@@ -413,9 +413,6 @@ impl graphics::Layer for Layer {
     }
 
     fn merge(&mut self, layer: &mut Self) {
-        if self.is_independent || layer.is_independent {
-            return;
-        }
         self.quads.append(&mut layer.quads);
         self.triangles.append(&mut layer.triangles);
         self.primitives.append(&mut layer.primitives);
