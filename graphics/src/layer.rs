@@ -7,7 +7,7 @@ use crate::core::{Rectangle, Transformation};
 /// rendered in a specific order.
 pub trait Layer: Default {
     /// Creates a new [`Layer`] with the given bounds.
-    fn with_bounds(bounds: Rectangle,is_independent: bool) -> Self;
+    fn with_bounds(bounds: Rectangle) -> Self;
 
     /// Returns the current bounds of the [`Layer`].
     fn bounds(&self) -> Rectangle;
@@ -82,7 +82,7 @@ impl<T: Layer> Stack<T> {
 
     /// Pushes a new clipping region in the [`Stack`]; creating a new layer in the
     /// process.
-    pub fn push_clip(&mut self, bounds: Rectangle,is_independent: bool) {
+    pub fn push_clip(&mut self, bounds: Rectangle) {
         self.previous.push(self.current);
 
         self.current = self.active_count;
@@ -91,7 +91,7 @@ impl<T: Layer> Stack<T> {
         let bounds = bounds * self.transformation();
 
         if self.current == self.layers.len() {
-            self.layers.push(T::with_bounds(bounds,is_independent));
+            self.layers.push(T::with_bounds(bounds));
         } else {
             self.layers[self.current].resize(bounds);
         }

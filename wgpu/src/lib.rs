@@ -670,8 +670,8 @@ impl Renderer {
 }
 
 impl core::Renderer for Renderer {
-    fn start_layer(&mut self, bounds: Rectangle,is_independent: bool) {
-        self.layers.push_clip(bounds,is_independent);
+    fn start_layer(&mut self, bounds: Rectangle) {
+        self.layers.push_clip(bounds);
     }
 
     fn end_layer(&mut self) {

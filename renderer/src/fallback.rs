@@ -54,8 +54,8 @@ where
         delegate!(self, renderer, renderer.reset(new_bounds));
     }
 
-    fn start_layer(&mut self, bounds: Rectangle,is_independent:bool) {
-        delegate!(self, renderer, renderer.start_layer(bounds,is_independent));
+    fn start_layer(&mut self, bounds: Rectangle) {
+        delegate!(self, renderer, renderer.start_layer(bounds));
     }
 
     fn end_layer(&mut self) {

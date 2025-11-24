@@ -299,7 +299,7 @@ impl Default for Layer {
 }
 
 impl graphics::Layer for Layer {
-    fn with_bounds(bounds: Rectangle,is_independent:bool) -> Self {
+    fn with_bounds(bounds: Rectangle) -> Self {
         Self {
             bounds,
             ..Self::default()

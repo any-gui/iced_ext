@@ -1,7 +1,5 @@
-use crate::core::{
-    self, Background, Color, ExtBackground, ExtPath, ExtPolygon, ExtShadow,
-    Point, Rectangle, Shadow, Svg, Transformation, renderer,
-};
+use iced_debug::core::ExtBackground;
+use crate::core::{self, Background, Color, Point, Rectangle, Svg, Transformation, renderer, ExtPolygon, ExtPath, ExtShadow, Shadow};
 use crate::graphics;
 use crate::graphics::Mesh;
 use crate::graphics::color;
@@ -18,8 +16,6 @@ pub type Stack = layer::Stack<Layer>;
 #[derive(Debug)]
 pub struct Layer {
     pub bounds: Rectangle,
-    /// independent layer will not merge with other layers
-    pub is_independent: bool,
     pub quads: quad::Batch,
     pub triangles: triangle::Batch,
     pub primitives: primitive::Batch,
@@ -73,8 +69,7 @@ impl Layer {
         transformation: Transformation,
     ) {
         let bounds = polygon.bounds * transformation;
-        let shadow =
-            polygon.shadow.shadows.first().copied().unwrap_or_default();
+        let shadow = polygon.shadow.shadows.first().copied().unwrap_or_default();
         let background = match ext_background {
             ExtBackground::Color(c) => Background::Color(c),
             _ => Background::Color(Color::TRANSPARENT),
@@ -84,7 +79,7 @@ impl Layer {
             ExtPath::Quad(radius) => {
                 let border_color = match &polygon.border.background {
                     ExtBackground::Color(c) => *c,
-                    _ => Color::TRANSPARENT,
+                    _ => Color::TRANSPARENT
                 };
                 let quad = Quad {
                     position: [bounds.x, bounds.y],
@@ -92,12 +87,10 @@ impl Layer {
                     border_color: color::pack(border_color),
                     border_radius: (*radius * transformation.scale_factor())
                         .into(),
-                    border_width: polygon.border.width
-                        * transformation.scale_factor(),
+                    border_width: polygon.border.width * transformation.scale_factor(),
                     shadow_color: color::pack(shadow.color),
-                    shadow_offset: (shadow.offset
-                        * transformation.scale_factor())
-                    .into(),
+                    shadow_offset: (shadow.offset * transformation.scale_factor())
+                        .into(),
                     shadow_blur_radius: shadow.blur_radius
                         * transformation.scale_factor(),
                     snap: polygon.snap as u32,
@@ -331,10 +324,9 @@ impl Layer {
 }
 
 impl graphics::Layer for Layer {
-    fn with_bounds(bounds: Rectangle,is_independent:bool) -> Self {
+    fn with_bounds(bounds: Rectangle) -> Self {
         Self {
             bounds,
-            is_independent,
             ..Self::default()
         }
     }
@@ -425,7 +417,6 @@ impl Default for Layer {
     fn default() -> Self {
         Self {
             bounds: Rectangle::INFINITE,
-            is_independent: false,
             quads: quad::Batch::default(),
             triangles: triangle::Batch::default(),
             primitives: primitive::Batch::default(),

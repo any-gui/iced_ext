@@ -349,27 +349,25 @@ where
         let style = theme.style(&self.class);
 
         if let Some(clipped_viewport) = bounds.intersection(viewport) {
-            renderer.with_independent_layer(layout.bounds(), |renderer| {
-                draw_background(renderer, &style, bounds);
+            draw_background(renderer, &style, bounds);
 
-                self.content.as_widget().draw(
-                    tree,
-                    renderer,
-                    theme,
-                    &renderer::Style {
-                        text_color: style
-                            .text_color
-                            .unwrap_or(renderer_style.text_color),
-                    },
-                    layout.children().next().unwrap(),
-                    cursor,
-                    if self.clip {
-                        &clipped_viewport
-                    } else {
-                        viewport
-                    },
-                );
-            });
+            self.content.as_widget().draw(
+                tree,
+                renderer,
+                theme,
+                &renderer::Style {
+                    text_color: style
+                        .text_color
+                        .unwrap_or(renderer_style.text_color),
+                },
+                layout.children().next().unwrap(),
+                cursor,
+                if self.clip {
+                    &clipped_viewport
+                } else {
+                    viewport
+                },
+            );
         }
     }
 
